@@ -8,13 +8,13 @@ class WickedPdf
     end
 
     def call(env)
-      @request    = Rack::Request.new(env)
+      if rendering_pdf? && headers['Content-Type'] =~ /text\/html|application\/xhtml\+xml/
+        @request    = Rack::Request.new(env)
       @render_pdf = false
 
-      set_request_to_render_as_pdf(env) if render_as_pdf?
-      status, headers, response = @app.call(env)
-
-      if rendering_pdf? && headers['Content-Type'] =~ /text\/html|application\/xhtml\+xml/
+        set_request_to_render_as_pdf(env)
+        status, headers, response = @app.call(env)
+      
         body = response.respond_to?(:body) ? response.body : response.join
         body = body.join if body.is_a?(Array)
 
@@ -32,9 +32,11 @@ class WickedPdf
           headers['Content-Disposition']       = 'attachment'
           headers['Content-Transfer-Encoding'] = 'binary'
         end
+        
+        [status, headers, response]
+      else
+        @app.call(env)
       end
-
-      [status, headers, response]
     end
 
     private
